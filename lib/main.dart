@@ -44,12 +44,10 @@ class _IsolateExampleState extends State<IsolateExample> {
 
     await Isolate.spawn(_calculateFactorial, receivePort.sendPort);
 
-    receivePort.listen((data) {
-      setState(() {
-        _factorial = "Giai thừa là: $data";
-        _isCalculatingFactorial = false;
-      });
-      receivePort.close(); 
+    final result = await receivePort.first;
+    setState(() {
+      _factorial = "Giai thừa là: $result";
+      _isCalculatingFactorial = false;
     });
   }
 
@@ -58,7 +56,7 @@ class _IsolateExampleState extends State<IsolateExample> {
     for (int i = 1; i <= 40; i++) {
       factorial *= i;
     }
-    sendPort.send(factorial); 
+    sendPort.send(factorial.toString());
   }
 
   Future<void> _calculateSumInIsolate() async {
@@ -70,18 +68,17 @@ class _IsolateExampleState extends State<IsolateExample> {
 
     await Isolate.spawn(_calculateSum, receivePort.sendPort);
 
-    receivePort.listen((data) {
-      setState(() {
-        _sum = "Tổng là: $data";
-        _isCalculatingSum = false;
-      });
-      receivePort.close(); 
+    final result = await receivePort.first;
+    setState(() {
+      _sum = "Tổng là: $result";
+      _isCalculatingSum = false;
     });
+    receivePort.close();
   }
 
   static void _calculateSum(SendPort sendPort) {
     int sum = 0;
-    for (int i = 1; i <= 10000000; i++) {
+    for (int i = 1; i <= 100000000; i++) {
       sum += i;
     }
     sendPort.send(sum); // Gửi kết quả trở lại
@@ -91,7 +88,7 @@ class _IsolateExampleState extends State<IsolateExample> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Isolate Demo"), 
+        title: const Text("Isolate Demo"),
         centerTitle: true,
       ),
       body: Center(
@@ -102,11 +99,15 @@ class _IsolateExampleState extends State<IsolateExample> {
             Text(_factorial),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _isCalculatingSum && _isCalculatingFactorial ? null : () {
-                _calculateSumInIsolate();
-                _calculateFactorialInIsolate();
-              },
-              child: Text(_isCalculatingSum ? "Đang tính..." : "Tính tổng 1000000 số đầu và giai thừa 40!"),
+              onPressed: _isCalculatingSum || _isCalculatingFactorial
+                  ? null
+                  : () {
+                      _calculateSumInIsolate();
+                      _calculateFactorialInIsolate();
+                    },
+              child: Text(_isCalculatingSum
+                  ? "Đang tính..."
+                  : "Tính tổng 1000000 số đầu và giai thừa 40!"),
             ),
           ],
         ),
